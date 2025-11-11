@@ -1,244 +1,397 @@
+# Stapler - Modern Blender MCP Integration
 
+**Stapler** connects Blender to AI assistants like Claude through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), enabling AI-driven 3D modeling, scene inspection, and automation.
 
-# BlenderMCP - Blender Model Context Protocol Integration
+> **Note:** Stapler is a modernized fork of [blender-mcp](https://github.com/ahujasid/blender-mcp) by Siddharth Ahuja, completely rewritten with Python 3.13+, official MCP SDK, and focused on core Blender functionality.
 
-BlenderMCP connects Blender to Claude AI through the Model Context Protocol (MCP), allowing Claude to directly interact with and control Blender. This integration enables prompt assisted 3D modeling, scene creation, and manipulation.
-
-**We have no official website. Any website you see online is unofficial and has no affiliation with this project. Use them at your own risk.**
-
-[Full tutorial](https://www.youtube.com/watch?v=lCyQ717DuzQ)
-
-### Join the Community
-
-Give feedback, get inspired, and build on top of the MCP: [Discord](https://discord.gg/z5apgR8TFU)
-
-### Supporters
-
-[CodeRabbit](https://www.coderabbit.ai/)
-
-[Satish Goda](https://github.com/satishgoda)
-
-**All supporters:**
-
-[Support this project](https://github.com/sponsors/ahujasid)
-
-## Release notes (1.2.0)
-- View screenshots for Blender viewport to better understand the scene
-- Search and download Sketchfab models
-
-
-### Previously added features:
-- Support for Poly Haven assets through their API
-- Support to generate 3D models using Hyper3D Rodin
-- For newcomers, you can go straight to Installation. For existing users, see the points below
-- Download the latest addon.py file and replace the older one, then add it to Blender
-- Delete the MCP server from Claude and add it back again, and you should be good to go!
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-1.0+-green.svg)](https://modelcontextprotocol.io)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ## Features
 
-- **Two-way communication**: Connect Claude AI to Blender through a socket-based server
-- **Object manipulation**: Create, modify, and delete 3D objects in Blender
-- **Material control**: Apply and modify materials and colors
-- **Scene inspection**: Get detailed information about the current Blender scene
-- **Code execution**: Run arbitrary Python code in Blender from Claude
+- 🎨 **Scene Inspection** - Get detailed information about Blender scenes and objects
+- 📸 **Viewport Screenshots** - Capture and analyze the 3D viewport
+- 🔧 **Object Queries** - Retrieve transform, materials, and bounding box data
+- 💻 **Code Execution** - Run Python code directly in Blender
+- 🚀 **Modern Architecture** - Built with Python 3.13+ and official MCP SDK
+- 🧹 **Focused & Clean** - Only core Blender functionality, no external services
 
-## Components
+## Architecture
 
-The system consists of two main components:
+Stapler consists of two components:
 
-1. **Blender Addon (`addon.py`)**: A Blender addon that creates a socket server within Blender to receive and execute commands
-2. **MCP Server (`src/blender_mcp/server.py`)**: A Python server that implements the Model Context Protocol and connects to the Blender addon
+1. **MCP Server** (`src/stapler/`) - Implements the MCP protocol using FastMCP
+2. **Blender Addon** (`blender_addon/stapler_addon.py`) - Socket server inside Blender
+
+```
+┌─────────────────┐         MCP Protocol         ┌──────────────────┐
+│                 │ ◄──────────────────────────► │                  │
+│  Claude / AI    │                               │  Stapler Server  │
+│                 │                               │    (FastMCP)     │
+└─────────────────┘                               └──────────────────┘
+                                                           │
+                                                   TCP Socket (9876)
+                                                           │
+                                                           ▼
+                                                  ┌──────────────────┐
+                                                  │     Blender      │
+                                                  │  (Stapler Addon) │
+                                                  └──────────────────┘
+```
+
+## Prerequisites
+
+- **Python 3.13+** - [Download](https://www.python.org/downloads/)
+- **Blender 4.0+** - [Download](https://www.blender.org/download/)
+- **uv** - [Install](https://docs.astral.sh/uv/getting-started/installation/)
+
+### Installing uv
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows:**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
 ## Installation
 
+### 1. Install the MCP Server
 
-### Prerequisites
+Clone the repository:
 
-- Blender 3.0 or newer
-- Python 3.10 or newer
-- uv package manager: 
-
-**If you're on Mac, please install uv as**
 ```bash
-brew install uv
+git clone https://github.com/gmaynez/stapler.git
+cd stapler
 ```
-**On Windows**
+
+Install dependencies with uv:
+
 ```bash
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex" 
-```
-and then
-```bash
-set Path=C:\Users\nntra\.local\bin;%Path%
+uv sync
 ```
 
-Otherwise installation instructions are on their website: [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+### 2. Install the Blender Addon
 
-**⚠️ Do not proceed before installing UV**
-
-### Environment Variables
-
-The following environment variables can be used to configure the Blender connection:
-
-- `BLENDER_HOST`: Host address for Blender socket server (default: "localhost")
-- `BLENDER_PORT`: Port number for Blender socket server (default: 9876)
-
-Example:
-```bash
-export BLENDER_HOST='host.docker.internal'
-export BLENDER_PORT=9876
-```
-
-### Claude for Desktop Integration
-
-[Watch the setup instruction video](https://www.youtube.com/watch?v=neoK_WMq92g) (Assuming you have already installed uv)
-
-Go to Claude > Settings > Developer > Edit Config > claude_desktop_config.json to include the following:
-
-```json
-{
-    "mcpServers": {
-        "blender": {
-            "command": "uvx",
-            "args": [
-                "blender-mcp"
-            ]
-        }
-    }
-}
-```
-
-### Cursor integration
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=blender&config=eyJjb21tYW5kIjoidXZ4IGJsZW5kZXItbWNwIn0%3D)
-
-For Mac users, go to Settings > MCP and paste the following 
-
-- To use as a global server, use "add new global MCP server" button and paste
-- To use as a project specific server, create `.cursor/mcp.json` in the root of the project and paste
-
-
-```json
-{
-    "mcpServers": {
-        "blender": {
-            "command": "uvx",
-            "args": [
-                "blender-mcp"
-            ]
-        }
-    }
-}
-```
-
-For Windows users, go to Settings > MCP > Add Server, add a new server with the following settings:
-
-```json
-{
-    "mcpServers": {
-        "blender": {
-            "command": "cmd",
-            "args": [
-                "/c",
-                "uvx",
-                "blender-mcp"
-            ]
-        }
-    }
-}
-```
-
-[Cursor setup video](https://www.youtube.com/watch?v=wgWsJshecac)
-
-**⚠️ Only run one instance of the MCP server (either on Cursor or Claude Desktop), not both**
-
-### Visual Studio Code Integration
-
-_Prerequisites_: Make sure you have [Visual Studio Code](https://code.visualstudio.com/) installed before proceeding.
-
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_blender--mcp_server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=ffffff)](vscode:mcp/install?%7B%22name%22%3A%22blender-mcp%22%2C%22type%22%3A%22stdio%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22blender-mcp%22%5D%7D)
-
-### Installing the Blender Addon
-
-1. Download the `addon.py` file from this repo
 1. Open Blender
-2. Go to Edit > Preferences > Add-ons
-3. Click "Install..." and select the `addon.py` file
-4. Enable the addon by checking the box next to "Interface: Blender MCP"
+2. Go to **Edit > Preferences > Add-ons**
+3. Click **Install...** and select `blender_addon/stapler_addon.py`
+4. Enable the addon by checking the box next to "Interface: Stapler MCP Integration"
 
+### 3. Configure Claude Desktop
+
+Edit your Claude Desktop config file:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "stapler": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/stapler",
+        "run",
+        "stapler"
+      ]
+    }
+  }
+}
+```
+
+Replace `/absolute/path/to/stapler` with the actual path to your Stapler installation.
+
+**Windows users:** Use forward slashes in the path, e.g., `C:/Users/YourName/stapler`
+
+### 4. Configure Cursor (Optional)
+
+For Cursor IDE integration, go to **Settings > MCP** and add:
+
+**macOS/Linux:**
+```json
+{
+  "mcpServers": {
+    "stapler": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/stapler",
+        "run",
+        "stapler"
+      ]
+    }
+  }
+}
+```
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "stapler": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "uv",
+        "--directory",
+        "C:/path/to/stapler",
+        "run",
+        "stapler"
+      ]
+    }
+  }
+}
+```
 
 ## Usage
 
 ### Starting the Connection
-![BlenderMCP in the sidebar](assets/addon-instructions.png)
 
-1. In Blender, go to the 3D View sidebar (press N if not visible)
-2. Find the "BlenderMCP" tab
-3. Turn on the Poly Haven checkbox if you want assets from their API (optional)
-4. Click "Connect to Claude"
-5. Make sure the MCP server is running in your terminal
+1. Open Blender
+2. Press `N` to show the sidebar
+3. Navigate to the **Stapler** tab
+4. Click **"Connect to MCP Server"**
+5. The server will start on port `9876` (default)
 
-### Using with Claude
+### Available Tools
 
-Once the config file has been set on Claude, and the addon is running on Blender, you will see a hammer icon with tools for the Blender MCP.
+Stapler provides 4 core tools to Claude:
 
-![BlenderMCP in the sidebar](assets/hammer-icon.png)
+#### 1. `get_scene_info`
 
-#### Capabilities
+Get comprehensive information about the current Blender scene.
 
-- Get scene and object information 
-- Create, delete and modify shapes
-- Apply or create materials for objects
-- Execute any Python code in Blender
-- Download the right models, assets and HDRIs through [Poly Haven](https://polyhaven.com/)
-- AI generated 3D models through [Hyper3D Rodin](https://hyper3d.ai/)
+**Example:**
+> "What objects are in the current scene?"
 
+**Returns:**
+- Scene name
+- Object count
+- List of objects with names, types, and locations
+- Material count
 
-### Example Commands
+#### 2. `get_object_info`
 
-Here are some examples of what you can ask Claude to do:
+Get detailed information about a specific object.
 
-- "Create a low poly scene in a dungeon, with a dragon guarding a pot of gold" [Demo](https://www.youtube.com/watch?v=DqgKuLYUv00)
-- "Create a beach vibe using HDRIs, textures, and models like rocks and vegetation from Poly Haven" [Demo](https://www.youtube.com/watch?v=I29rn92gkC4)
-- Give a reference image, and create a Blender scene out of it [Demo](https://www.youtube.com/watch?v=FDRb03XPiRo)
-- "Generate a 3D model of a garden gnome through Hyper3D"
-- "Get information about the current scene, and make a threejs sketch from it" [Demo](https://www.youtube.com/watch?v=jxbNI5L7AH8)
-- "Make this car red and metallic" 
-- "Create a sphere and place it above the cube"
-- "Make the lighting like a studio"
-- "Point the camera at the scene, and make it isometric"
+**Example:**
+> "Tell me about the Cube object"
 
-## Hyper3D integration
+**Parameters:**
+- `object_name` - Name of the object to query
 
-Hyper3D's free trial key allows you to generate a limited number of models per day. If the daily limit is reached, you can wait for the next day's reset or obtain your own key from hyper3d.ai and fal.ai.
+**Returns:**
+- Transform data (location, rotation, scale)
+- Object type
+- Materials
+- Mesh data (vertex/edge/polygon counts)
+- World-space bounding box
+
+#### 3. `get_viewport_screenshot`
+
+Capture a screenshot of the 3D viewport.
+
+**Example:**
+> "Show me a screenshot of the current view"
+
+**Parameters:**
+- `max_size` - Maximum dimension in pixels (default: 800)
+
+**Returns:**
+- PNG image of the viewport
+
+#### 4. `execute_blender_code`
+
+Execute Python code in Blender's context.
+
+**Example:**
+> "Create a UV sphere at the origin"
+
+**Parameters:**
+- `code` - Python code to execute
+
+**⚠️ Warning:** This executes arbitrary code in Blender. Always save your work first.
+
+### Example Interactions
+
+**Scene Exploration:**
+```
+You: What's in the current scene?
+Claude: [Uses get_scene_info]
+        There's a default scene with 3 objects: Camera, Cube, and Light...
+```
+
+**Object Manipulation:**
+```
+You: Create a red sphere above the cube
+Claude: [Uses execute_blender_code]
+        I've created a red sphere at location (0, 0, 3)...
+```
+
+**Visual Inspection:**
+```
+You: Show me how it looks
+Claude: [Uses get_viewport_screenshot]
+        Here's the current viewport...
+```
+
+## Development
+
+### Project Structure
+
+```
+stapler/
+├── src/stapler/
+│   ├── __init__.py           # Package initialization
+│   ├── server.py             # FastMCP server implementation
+│   ├── connection.py         # Blender socket connection
+│   └── tools/                # Tool type definitions
+│       ├── scene.py
+│       ├── objects.py
+│       ├── viewport.py
+│       └── execution.py
+├── blender_addon/
+│   └── stapler_addon.py      # Blender addon
+├── main.py                   # Entry point
+├── pyproject.toml            # uv project configuration
+└── README.md
+```
+
+### Running in Development Mode
+
+Test the server with the MCP Inspector:
+
+```bash
+uv run mcp dev src/stapler/server.py
+```
+
+This opens an interactive inspector to test tools.
+
+### Running Directly
+
+```bash
+uv run stapler
+```
+
+Or with Python:
+
+```bash
+uv run python main.py
+```
 
 ## Troubleshooting
 
-- **Connection issues**: Make sure the Blender addon server is running, and the MCP server is configured on Claude, DO NOT run the uvx command in the terminal. Sometimes, the first command won't go through but after that it starts working.
-- **Timeout errors**: Try simplifying your requests or breaking them into smaller steps
-- **Poly Haven integration**: Claude is sometimes erratic with its behaviour
-- **Have you tried turning it off and on again?**: If you're still having connection errors, try restarting both Claude and the Blender server
+### Connection Issues
 
+**Problem:** "Could not connect to Blender"
 
-## Technical Details
+**Solutions:**
+1. Make sure Blender is running
+2. Ensure the Stapler addon is enabled
+3. Click "Connect to MCP Server" in Blender's Stapler panel
+4. Check that port 9876 is not blocked by firewall
 
-### Communication Protocol
+### Port Already in Use
 
-The system uses a simple JSON-based protocol over TCP sockets:
+**Problem:** Port 9876 is already in use
 
-- **Commands** are sent as JSON objects with a `type` and optional `params`
-- **Responses** are JSON objects with a `status` and `result` or `message`
+**Solution:** Change the port in Blender's Stapler panel before connecting
 
-## Limitations & Security Considerations
+### Claude Can't Find Tools
 
-- The `execute_blender_code` tool allows running arbitrary Python code in Blender, which can be powerful but potentially dangerous. Use with caution in production environments. ALWAYS save your work before using it.
-- Poly Haven requires downloading models, textures, and HDRI images. If you do not want to use it, please turn it off in the checkbox in Blender. 
-- Complex operations might need to be broken down into smaller steps
+**Problem:** Claude says it doesn't have access to Blender tools
 
+**Solutions:**
+1. Restart Claude Desktop after editing the config file
+2. Verify the config file path is correct
+3. Check Claude's logs for MCP connection errors
+
+### Screenshots Not Working
+
+**Problem:** `get_viewport_screenshot` fails
+
+**Solution:** Make sure you have at least one 3D viewport open in Blender
+
+## Differences from blender-mcp
+
+Stapler is a **significant rewrite** of the original blender-mcp:
+
+### Removed
+- ❌ PolyHaven integration (6 tools)
+- ❌ Hyper3D Rodin integration (4 tools)
+- ❌ Sketchfab integration (2 tools)
+- ❌ API key management
+- ❌ External service UI elements
+- ❌ Complex prompt templates
+
+### Added/Improved
+- ✅ Python 3.13+ support
+- ✅ Official MCP SDK with FastMCP
+- ✅ Full uv package manager integration
+- ✅ Modular architecture
+- ✅ Modern type hints
+- ✅ Better error handling
+- ✅ ~71% code reduction (cleaner, more maintainable)
+- ✅ GPL v3 license (required due to Blender Python API usage)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please:
 
-## Disclaimer
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-This is a third-party integration and not made by Blender. Made by [Siddharth](https://x.com/sidahuj)
+## License
+
+This project is licensed under the **GNU General Public License v3.0 or later** (GPL-3.0-or-later).
+
+See [LICENSE](LICENSE) file for details.
+
+**Note:** This project uses the Blender Python API (`bpy`), which is GPL v3 licensed. 
+Per GPL requirements, any software that uses GPL-licensed libraries must also be 
+GPL licensed. This is why Stapler is GPL v3, even though the original blender-mcp 
+was MIT licensed (MIT is GPL-compatible).
+
+### Original Work Attribution
+
+Stapler is a derivative work based on [blender-mcp](https://github.com/ahujasid/blender-mcp) by Siddharth Ahuja, licensed under the MIT License.
+
+See [NOTICE](NOTICE) file for full attribution and changes made.
+
+## Acknowledgments
+
+- **Siddharth Ahuja** - Original blender-mcp creator
+- **Anthropic** - For Claude and the Model Context Protocol
+- **Model Context Protocol Team** - For the Python SDK
+- **Blender Foundation** - For Blender
+
+## Links
+
+- [Model Context Protocol](https://modelcontextprotocol.io)
+- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+- [Blender Python API](https://docs.blender.org/api/current/)
+- [uv Package Manager](https://docs.astral.sh/uv/)
+- [Original blender-mcp](https://github.com/ahujasid/blender-mcp)
+
+## Support
+
+For issues and questions:
+
+- **Issues:** [GitHub Issues](https://github.com/gmaynez/stapler/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/gmaynez/stapler/discussions)
+
+---
+
+**Made with 🖇️ by the Stapler community**

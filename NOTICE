@@ -1,0 +1,64 @@
+Stapler - Blender Model Context Protocol Integration
+Copyright (c) 2025 Stapler Contributors
+
+Licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later)
+
+This project is a derivative work based on blender-mcp:
+https://github.com/ahujasid/blender-mcp
+
+Original work Copyright (c) 2025 Siddharth Ahuja
+Licensed under the MIT License
+
+Note: This project uses the Blender Python API, which is GPL v3 licensed.
+Therefore, this project must also be GPL v3 licensed.
+
+================================================================================
+ORIGINAL MIT LICENSE
+================================================================================
+
+MIT License
+
+Copyright (c) 2025 Siddharth Ahuja
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+CHANGES MADE
+================================================================================
+
+Stapler is a modernized and significantly refactored version of blender-mcp:
+
+1. Complete architectural redesign with modular structure
+2. Migration to official Python MCP SDK patterns
+3. Full uv package manager integration
+4. Python 3.13+ features and modern type hints
+5. Removed all external service integrations (PolyHaven, Hyper3D, Sketchfab)
+6. Focus on core Blender functionality only (4 essential tools)
+7. Simplified Blender addon (~78% code reduction)
+8. Improved error handling and user feedback
+9. Updated to Blender 4.5+ API patterns
+
+Approximately 71% of the original codebase was removed or completely rewritten.
+
+## License Compatibility
+
+The original blender-mcp project is MIT licensed (permissive), which is compatible 
+with GPL v3. However, since this project uses the Blender Python API (bpy), which 
+is GPL v3 licensed, the entire project must be GPL v3 licensed per GPL requirements.
+

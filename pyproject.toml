@@ -1,32 +1,40 @@
 [project]
-name = "blender-mcp"
-version = "1.2"
-description = "Blender integration through the Model Context Protocol"
+name = "stapler"
+version = "2.0.0"
+description = "Modern Blender integration through the Model Context Protocol"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Stapler Contributors"}
 ]
-license = {text = "MIT"}
+license = {text = "GPL-3.0-or-later"}
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "mcp[cli]>=1.3.0",
+    "mcp>=1.0.0",
 ]
 
 [project.scripts]
-blender-mcp = "blender_mcp.server:main"
+stapler = "stapler.server:main"
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.hatchling.build.targets.wheel]
+packages = ["src/stapler"]
+
+[tool.uv]
+dev-dependencies = []
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/blender-mcp"
-"Bug Tracker" = "https://github.com/yourusername/blender-mcp/issues"
+"Homepage" = "https://github.com/gmaynez/stapler"
+"Bug Tracker" = "https://github.com/gmaynez/stapler/issues"
+"Original Project" = "https://github.com/ahujasid/blender-mcp"
