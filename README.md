@@ -10,12 +10,15 @@
 
 ## Features
 
-- 🎨 **Scene Inspection** - Get detailed information about Blender scenes and objects
+- 🎨 **Scene Inspection** - Get detailed information about Blender scenes and objects with collection hierarchy
 - 📸 **Viewport Screenshots** - Capture and analyze the 3D viewport
-- 🔧 **Object Queries** - Retrieve transform, materials, and bounding box data
+- 🔧 **Object Queries** - Retrieve transform, materials, modifiers, constraints, and bounding box data
 - 💻 **Code Execution** - Run Python code directly in Blender
 - 🚀 **Modern Architecture** - Built with Python 3.13+ and official MCP SDK
 - 🧹 **Focused & Clean** - Only core Blender functionality, no external services
+- 📚 **API Documentation** - Access Blender Python API docs and examples via MCP resources
+- 🎯 **Viewport Navigation** - Focus viewport on specific objects
+- 🖼️ **Quick Rendering** - Generate thumbnail previews of scenes
 
 ## Architecture
 
@@ -164,36 +167,42 @@ For Cursor IDE integration, go to **Settings > MCP** and add:
 
 ### Available Tools
 
-Stapler provides 4 core tools to Claude:
+Stapler provides 8 core tools to Claude:
 
-#### 1. `get_scene_info`
+#### 1. `get_objects_summary`
 
-Get comprehensive information about the current Blender scene.
+Get a summary of all objects in the current Blender scene with collection hierarchy.
 
 **Example:**
-> "What objects are in the current scene?"
+> "What objects are in the current scene and how are they organized?"
+
+**Parameters:**
+- `include_hidden` - Whether to include hidden objects (default: false)
 
 **Returns:**
 - Scene name
-- Object count
-- List of objects with names, types, and locations
+- Collection hierarchy with objects
+- Object counts by type
 - Material count
 
-#### 2. `get_object_info`
+#### 2. `get_object_detail_summary`
 
 Get detailed information about a specific object.
 
 **Example:**
-> "Tell me about the Cube object"
+> "Tell me about the Cube object including its modifiers"
 
 **Parameters:**
-- `object_name` - Name of the object to query
+- `name` - Name of the object to query
 
 **Returns:**
 - Transform data (location, rotation, scale)
 - Object type
 - Materials
 - Mesh data (vertex/edge/polygon counts)
+- Modifiers and constraints
+- Parent/children relationships
+- Collection membership
 - World-space bounding box
 
 #### 3. `get_viewport_screenshot`
@@ -221,13 +230,88 @@ Execute Python code in Blender's context.
 
 **⚠️ Warning:** This executes arbitrary code in Blender. Always save your work first.
 
+#### 5. `jump_to_view3d_object_by_name`
+
+Focus the 3D viewport on a specific object.
+
+**Example:**
+> "Focus on the Camera object"
+
+**Parameters:**
+- `name` - Name of the object to focus on
+
+**Returns:**
+- Success status
+- Object location
+
+#### 6. `get_screenshot_of_window_as_json`
+
+Get a JSON description of the Blender window layout.
+
+**Example:**
+> "What panels are open in the current Blender window?"
+
+**Returns:**
+- Window dimensions
+- All areas with their types and sizes
+- Active and selected objects in 3D viewports
+- Active property panels
+
+#### 7. `render_thumbnail_to_path`
+
+Render a quick thumbnail preview of the current scene.
+
+**Example:**
+> "Render a quick preview of the current scene"
+
+**Parameters:**
+- `output_path` - Where to save the thumbnail
+- `width` - Thumbnail width (default: 256)
+- `height` - Thumbnail height (default: 256)
+
+**Returns:**
+- PNG image of the rendered thumbnail
+
+### MCP Resources
+
+Stapler provides 2 MCP resources for accessing Blender documentation:
+
+#### 1. `blender://api/{identifier}`
+
+Access Blender Python API documentation.
+
+**Example:**
+> "Show me the documentation for bpy.types.ShaderNodeBsdfPrincipled"
+
+**Parameters:**
+- `identifier` - Module or class name (e.g., `bpy.types.ShaderNodeBsdfPrincipled`)
+- Use `*` for pattern matching (e.g., `bpy.types.*`)
+
+**Returns:**
+- RST documentation content
+- List of matching modules for wildcard patterns
+
+#### 2. `blender://examples/{name}`
+
+Access Python code examples from Blender documentation.
+
+**Example:**
+> "Show me an example of using bpy.app.handlers"
+
+**Parameters:**
+- `name` - Example name (e.g., `bpy.app.handlers.0`)
+
+**Returns:**
+- Python code example
+- List of available examples for a module
+
 ### Example Interactions
 
 **Scene Exploration:**
 ```
 You: What's in the current scene?
-Claude: [Uses get_scene_info]
-        There's a default scene with 3 objects: Camera, Cube, and Light...
+Claude: [Uses get_objects_summary]
+        There's a default scene with 3 objects in 1 collection: Camera, Cube, and Light...
 ```
 
 **Object Manipulation:**
@@ -244,6 +328,20 @@ Claude: [Uses get_viewport_screenshot]
         Here's the current viewport...
 ```
 
+**Navigation:**
+```
+You: Focus on the Camera
+Claude: [Uses jump_to_view3d_object_by_name]
+        I've focused the viewport on the Camera...
+```
+
+**API Documentation:**
+```
+You: How do I create a material with Python?
+Claude: [Accesses blender://api/bpy.types.Material]
+        Here's the documentation for bpy.types.Material...
+```
+
 ## Development
 
 ### Project Structure
@@ -254,6 +352,9 @@ stapler/
 │   ├── __init__.py           # Package initialization
 │   ├── server.py             # FastMCP server implementation
 │   ├── connection.py         # Blender socket connection
+│   ├── data/                 # Bundled documentation
+│   │   ├── api/              # Blender Python API docs (RST)
+│   │   └── examples/         # Python code examples
 │   └── tools/                # Tool type definitions
 │       ├── scene.py
 │       ├── objects.py
@@ -342,6 +443,35 @@ Stapler is a **significant rewrite** of the original blender-mcp:
 - ✅ Better error handling
 - ✅ ~71% code reduction (cleaner, more maintainable)
 - ✅ GPL v3 license (required due to Blender Python API usage)
+- ✅ 8 MCP tools (up from 4)
+- ✅ MCP resources for API documentation and examples
+- ✅ Collection hierarchy support
+- ✅ Object modifiers and constraints info
+- ✅ Viewport navigation tools
+- ✅ Quick thumbnail rendering
+
+## Comparison with Official Blender MCP
+
+| Feature | Stapler | Official Blender MCP |
+|---------|---------|---------------------|
+| Blender Version | 4.0+ | 5.1+ |
+| Python | 3.13+ | Blender's Python |
+| MCP SDK | FastMCP | Custom |
+| Tools | 8 | 19 |
+| Resources | 2 (API docs, examples) | ❌ |
+| Background Execution | ❌ | ✅ |
+| Installation | `uv` | `.mcpb` bundle |
+
+**Stapler is ideal for:**
+- Users on Blender 4.x/5.0
+- Claude Desktop users
+- Quick setup without Blender Lab dependencies
+- Access to API documentation via MCP resources
+
+**Official MCP is better for:**
+- Blender 5.1+ users
+- Complex file analysis tasks
+- Background Blender process execution
 
 ## Contributing
 

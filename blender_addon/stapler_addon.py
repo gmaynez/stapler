@@ -202,10 +202,13 @@ class StaplerMCPServer:
         params = command.get("params", {})
 
         handlers = {
-            "get_scene_info": self.get_scene_info,
-            "get_object_info": self.get_object_info,
+            "get_objects_summary": self.get_objects_summary,
+            "get_object_detail_summary": self.get_object_detail_summary,
             "get_viewport_screenshot": self.get_viewport_screenshot,
             "execute_code": self.execute_code,
+            "jump_to_view3d_object_by_name": self.jump_to_view3d_object_by_name,
+            "get_screenshot_of_window_as_json": self.get_screenshot_of_window_as_json,
+            "render_thumbnail_to_path": self.render_thumbnail_to_path,
         }
 
         handler = handlers.get(cmd_type)
@@ -222,37 +225,66 @@ class StaplerMCPServer:
         else:
             return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
 
-    def get_scene_info(self) -> dict:
-        """Get information about the current Blender scene."""
+    def get_objects_summary(self, include_hidden: bool = False) -> dict:
+        """Get a summary of all objects with collection hierarchy."""
         try:
-            print("Getting scene info...")
-            scene_info = {
-                "name": bpy.context.scene.name,
-                "object_count": len(bpy.context.scene.objects),
-                "objects": [],
+            print("Getting objects summary...")
+
+            def get_collection_hierarchy(collection, include_hidden):
+                """Recursively get collection hierarchy."""
+                objects = []
+                for obj in collection.objects:
+                    if not include_hidden and obj.hide_get():
+                        continue
+                    objects.append({
+                        "name": obj.name,
+                        "type": obj.type,
+                        "visible": not obj.hide_get(),
+                    })
+
+                children = {}
+                for child_collection in collection.children:
+                    child_data = get_collection_hierarchy(child_collection, include_hidden)
+                    if child_data["objects"] or child_data["children"]:
+                        children[child_collection.name] = child_data
+
+                return {
+                    "objects": objects,
+                    "children": children,
+                }
+
+            scene = bpy.context.scene
+            hierarchy = get_collection_hierarchy(scene.collection, include_hidden)
+
+            # Count totals
+            def count_objects(node):
+                total = len(node["objects"])
+                for child in node["children"].values():
+                    total += count_objects(child)
+                return total
+
+            def count_collections(node):
+                total = 1  # Count self
+                for child in node["children"].values():
+                    total += count_collections(child)
+                return total
+
+            total_objects = count_objects(hierarchy)
+            total_collections = count_collections(hierarchy) - 1  # Exclude scene collection
+
+            result = {
+                "scene": scene.name,
+                "collections": hierarchy["children"],
+                "scene_objects": hierarchy["objects"],
+                "total_objects": total_objects,
+                "total_collections": total_collections,
                 "materials_count": len(bpy.data.materials),
             }
 
-            # Collect object information (limit to first 10 objects)
-            for i, obj in enumerate(bpy.context.scene.objects):
-                if i >= 10:
-                    break
-
-                obj_info = {
-                    "name": obj.name,
-                    "type": obj.type,
-                    "location": [
-                        round(float(obj.location.x), 2),
-                        round(float(obj.location.y), 2),
-                        round(float(obj.location.z), 2),
-                    ],
-                }
-                scene_info["objects"].append(obj_info)
-
-            print(f"Scene info collected: {len(scene_info['objects'])} objects")
-            return scene_info
+            print(f"Objects summary collected: {total_objects} objects in {total_collections} collections")
+            return result
         except Exception as e:
-            print(f"Error in get_scene_info: {e}")
+            print(f"Error in get_objects_summary: {e}")
             traceback.print_exc()
             return {"error": str(e)}
 
@@ -274,8 +306,8 @@ class StaplerMCPServer:
 
         return [[*min_corner], [*max_corner]]
 
-    def get_object_info(self, name: str) -> dict:
-        """Get detailed information about a specific object."""
+    def get_object_detail_summary(self, name: str) -> dict:
+        """Get detailed summary of a specific object."""
         obj = bpy.data.objects.get(name)
         if not obj:
             raise ValueError(f"Object not found: {name}")
@@ -287,7 +319,7 @@ class StaplerMCPServer:
             "location": [obj.location.x, obj.location.y, obj.location.z],
             "rotation": [obj.rotation_euler.x, obj.rotation_euler.y, obj.rotation_euler.z],
             "scale": [obj.scale.x, obj.scale.y, obj.scale.z],
-            "visible": obj.visible_get(),
+            "visible": not obj.hide_get(),
             "materials": [],
         }
 
@@ -309,7 +341,170 @@ class StaplerMCPServer:
                 "polygons": len(mesh.polygons),
             }
 
+        # Add modifiers
+        obj_info["modifiers"] = [mod.name for mod in obj.modifiers]
+
+        # Add constraints
+        obj_info["constraints"] = [con.name for con in obj.constraints]
+
+        # Add parent/children
+        obj_info["parent"] = obj.parent.name if obj.parent else None
+        obj_info["children"] = [child.name for child in obj.children]
+
+        # Add collection membership
+        obj_info["collections"] = [col.name for col in obj.users_collection]
+
         return obj_info
+
+    def jump_to_view3d_object_by_name(self, name: str) -> dict:
+        """Focus the 3D viewport on a specific object."""
+        try:
+            obj = bpy.data.objects.get(name)
+            if not obj:
+                raise ValueError(f"Object not found: {name}")
+
+            # Set as active object
+            bpy.context.view_layer.objects.active = obj
+            obj.select_set(True)
+
+            # Find the 3D viewport area
+            area = None
+            for a in bpy.context.screen.areas:
+                if a.type == "VIEW_3D":
+                    area = a
+                    break
+
+            if not area:
+                return {"error": "No 3D viewport found"}
+
+            # Focus viewport on the object
+            with bpy.context.temp_override(area=area, selected_objects=[obj]):
+                bpy.ops.view3d.view_selected()
+
+            return {
+                "success": True,
+                "object": obj.name,
+                "location": [obj.location.x, obj.location.y, obj.location.z],
+            }
+        except Exception as e:
+            print(f"Error in jump_to_view3d_object_by_name: {e}")
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def get_screenshot_of_window_as_json(self) -> dict:
+        """Get a JSON description of the Blender window layout."""
+        try:
+            screen = bpy.context.screen
+            window = bpy.context.window_manager.windows[0]
+
+            areas = []
+            for area in screen.areas:
+                area_info = {
+                    "type": area.type,
+                    "x": area.x,
+                    "y": area.y,
+                    "width": area.width,
+                    "height": area.height,
+                }
+
+                # Add context-specific info based on area type
+                if area.type == "VIEW_3D":
+                    # Get active and selected objects
+                    with bpy.context.temp_override(area=area):
+                        active_obj = bpy.context.view_layer.objects.active
+                        selected = [obj.name for obj in bpy.context.selected_objects]
+                        area_info["active_object"] = active_obj.name if active_obj else None
+                        area_info["selected_objects"] = selected
+
+                elif area.type == "PROPERTIES":
+                    # Get active property panel
+                    if hasattr(area.spaces, 'active') and hasattr(area.spaces.active, 'context'):
+                        area_info["active_panel"] = area.spaces.active.context
+
+                areas.append(area_info)
+
+            # Find active area
+            active_area = None
+            for area in screen.areas:
+                if area.type == "VIEW_3D":
+                    active_area = "VIEW_3D"
+                    break
+            if not active_area and areas:
+                active_area = areas[0]["type"]
+
+            result = {
+                "window_width": window.width,
+                "window_height": window.height,
+                "areas": areas,
+                "active_area": active_area,
+                "screen_name": screen.name,
+            }
+
+            print(f"Window layout collected: {len(areas)} areas")
+            return result
+        except Exception as e:
+            print(f"Error in get_screenshot_of_window_as_json: {e}")
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def render_thumbnail_to_path(
+        self, output_path: str, width: int = 256, height: int = 256
+    ) -> dict:
+        """Render a quick thumbnail preview of the current scene."""
+        try:
+            # Save current render settings
+            scene = bpy.context.scene
+            render = scene.render
+
+            old_width = render.resolution_x
+            old_height = render.resolution_y
+            old_percentage = render.resolution_percentage
+            old_samples = None
+            old_use_denoising = None
+
+            # Check if Cycles is the active engine
+            if render.engine == 'CYCLES':
+                old_samples = scene.cycles.samples
+                old_use_denoising = scene.cycles.use_denoising
+                scene.cycles.samples = 1  # Minimum samples for speed
+                scene.cycles.use_denoising = False
+
+            try:
+                # Override render settings for thumbnail
+                render.resolution_x = width
+                render.resolution_y = height
+                render.resolution_percentage = 100
+
+                # Render
+                bpy.ops.render.render(write_still=True)
+
+                # Get the rendered image
+                render_result = bpy.data.images.get("Render Result")
+                if render_result:
+                    render_result.save_render(output_path)
+                    bpy.data.images.remove(render_result)
+
+                return {
+                    "success": True,
+                    "filepath": output_path,
+                    "width": width,
+                    "height": height,
+                }
+            finally:
+                # Restore original render settings
+                render.resolution_x = old_width
+                render.resolution_y = old_height
+                render.resolution_percentage = old_percentage
+                if render.engine == 'CYCLES':
+                    if old_samples is not None:
+                        scene.cycles.samples = old_samples
+                    if old_use_denoising is not None:
+                        scene.cycles.use_denoising = old_use_denoising
+
+        except Exception as e:
+            print(f"Error in render_thumbnail_to_path: {e}")
+            traceback.print_exc()
+            return {"error": str(e)}
 
     def get_viewport_screenshot(
         self, max_size: int = 800, filepath: str = None, format: str = "png"

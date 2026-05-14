@@ -212,7 +212,7 @@ def get_blender_connection() -> BlenderConnection:
     if _blender_connection is not None:
         try:
             # Simple ping to check connection
-            _blender_connection.send_command("get_scene_info")
+            _blender_connection.send_command("get_objects_summary")
             return _blender_connection
         except Exception as e:
             # Connection is dead, close it and create a new one

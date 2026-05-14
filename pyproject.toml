@@ -31,6 +31,9 @@ build-backend = "hatchling.build"
 [tool.hatchling.build.targets.wheel]
 packages = ["src/stapler"]
 
+[tool.hatchling.build.targets.wheel.force-include]
+"src/stapler/data" = "stapler/data"
+
 [tool.uv]
 dev-dependencies = []
 
